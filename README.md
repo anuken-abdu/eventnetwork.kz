@@ -22,6 +22,7 @@
 3. Залить изменённые файлы в репозиторий.
 
 Перерисовать иллюстрации: `python3 src/render_art.py && python3 src/render_brand.py` (нужен Playwright).
+Баннеры превью ссылок для каждой страницы: `python3 src/render_og.py` (перерисовывает только изменившиеся), затем `python3 src/build.py`.
 
 ## Домен (hoster.kz → Vercel)
 DNS-записи домена eventnetwork.kz:

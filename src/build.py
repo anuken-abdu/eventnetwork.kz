@@ -5,7 +5,7 @@ from data import *
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
-VER = "2610222300"
+VER = "2610222359"
 TODAY = datetime.date.today().isoformat()
 E = lambda s: html.escape(str(s), quote=True)
 
@@ -42,6 +42,19 @@ def ic(name, cls="i"):
 LOGO_MARK = '''<svg class="logo-m" viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="#c9a35c" stroke-width="1.6"><circle cx="24" cy="24" r="19"/><ellipse cx="24" cy="24" rx="8.5" ry="19"/><path d="M5.5 18h37M5.5 30h37"/></g><g fill="#c9a35c"><circle cx="24" cy="5" r="2.6"/><circle cx="5.6" cy="18" r="2.2"/><circle cx="42.4" cy="30" r="2.2"/><circle cx="15.5" cy="30" r="2"/><circle cx="32.5" cy="18" r="2"/><circle cx="24" cy="43" r="2.6"/></g></svg>'''
 def logo(dark=False):
     return f'<a class="logo{" logo-d" if dark else ""}" href="/" aria-label="{BRAND} — на главную">{LOGO_MARK}<span><b>EVENT</b><b>NETWORK</b></span></a>'
+
+
+# Баннеры для превью ссылок (1200×630): url → (файл, заголовок, строка под ним, фон)
+OG = {
+    "/": ("home", HERO_H1, "Цифровая среда · коммуникации · мероприятия", "hero"),
+    "/o-kompanii/": ("o-kompanii", "О компании Event Network", "Многопрофильные решения для современных задач", "about"),
+    "/napravleniya/": ("napravleniya", "Направления деятельности", "Комплексные решения в различных направлениях", "portfolio"),
+    "/portfolio/": ("portfolio", "Портфолио", "Направления работы и компетенции компании", "portfolio"),
+    "/kontakty/": ("kontakty", "Открыты к деловому сотрудничеству", "Обсудим задачи и формат взаимодействия", "contacts"),
+    "/politika-konfidencialnosti/": ("politika", "Политика конфиденциальности", "Обработка и защита персональных данных", "quote"),
+}
+for _d in DIRS:
+    OG[f'/napravleniya/{_d["slug"]}/'] = (_d["slug"], _d["name"], "Направление Event Network", _d["img"])
 
 def dir_by(slug): return next(d for d in DIRS if d["slug"] == slug)
 def img(name, alt, cls="", w=960, h=640, lazy=True):
@@ -108,7 +121,8 @@ ORG = {"@context": "https://schema.org", "@type": "Organization", "@id": SITE + 
        "contactPoint": [{"@type": "ContactPoint", "contactType": "customer service", "email": EMAIL, "availableLanguage": ["ru"], **({"telephone": PHONE} if PHONE else {})}]}
 if PHONE: ORG["telephone"] = PHONE
 
-def page(url, title, desc, body, cur="", ld=None, og="og"):
+def page(url, title, desc, body, cur="", ld=None, og=None):
+    og = og or ("og/" + OG[url][0] if url in OG else "og")
     full = SITE + url
     lds = [ORG] + (ld or [])
     if url == "/":
@@ -125,7 +139,7 @@ def page(url, title, desc, body, cur="", ld=None, og="og"):
 <meta name="theme-color" content="#0b1b33">{gsc}
 <meta property="og:type" content="website"><meta property="og:locale" content="ru_KZ"><meta property="og:site_name" content="{BRAND}">
 <meta property="og:title" content="{E(title)}"><meta property="og:description" content="{E(desc)}"><meta property="og:url" content="{full}">
-<meta property="og:image" content="{SITE}/assets/img/{og}.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image" content="{SITE}/assets/img/{og}.jpg?v={VER}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="{E(title)}"><meta name="twitter:image" content="{SITE}/assets/img/{og}.jpg?v={VER}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest">
 <link rel="preload" href="/assets/fonts/manrope-cyrillic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
