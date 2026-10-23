@@ -3,7 +3,7 @@
 
 BRAND = "Event Network"
 DOMAIN = "eventnetwork.kz"
-SITE = "https://eventnetwork.kz"
+SITE = "https://www.eventnetwork.kz"   # основной адрес — с www (так отдаёт Vercel)
 
 # Контакты. Пустое значение — пункт не выводится нигде на сайте.
 PHONE = ""                     # например "+7 700 000 00 00"
@@ -11,7 +11,10 @@ WHATSAPP = ""                  # цифры без +, например "77000000
 EMAIL = "info@eventnetwork.kz"
 ADDRESS = "г. Алматы, Казахстан"
 HOURS = "Пн–Пт, 09:00–18:00"
-GA_ID = ""                     # Google Analytics 4, например "G-XXXXXXX"
+GA_ID = "G-L2SWRNHHMN"                     # Google Analytics 4, например "G-XXXXXXX"
+GADS_ID = "AW-18532018891"                   # тег Google Ads, например "AW-123456789"
+GADS_LEAD_LABEL = ""           # метка конверсии «Заявка» (форма и чат), например "AbCdEfGhIjK"
+GADS_CONTACT_LABEL = ""        # метка конверсии «Контакт» (клик по почте/телефону)
 GSC_META = ""                  # код подтверждения Search Console (если нужен мета-тегом)
 
 DEV_NAME = "Anuken"
