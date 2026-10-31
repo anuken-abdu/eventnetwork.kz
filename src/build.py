@@ -5,7 +5,7 @@ from data import *
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
-VER = "2610222359"
+VER = "3110261400"
 TODAY = datetime.date.today().isoformat()
 E = lambda s: html.escape(str(s), quote=True)
 
@@ -55,18 +55,24 @@ OG = {
 }
 for _d in DIRS:
     OG[f'/napravleniya/{_d["slug"]}/'] = (_d["slug"], _d["name"], "Направление Event Network", _d["img"])
+OG["/tury/"] = ("tury", "Туры и путешествия", "Казахстан, Иссык-Куль, зарубежье и детский отдых", "culture")
+for _t in TOURS:
+    OG[f'/tury/{_t["slug"]}/'] = ("tur-" + _t["slug"], _t["h1"], "Подбор тура под ваши даты и бюджет", "culture")
 
 def dir_by(slug): return next(d for d in DIRS if d["slug"] == slug)
 def img(name, alt, cls="", w=960, h=640, lazy=True):
     return f'<img class="{cls}" src="/assets/img/{name}.webp?v={VER}" alt="{E(alt)}" width="{w}" height="{h}"{" loading=\"lazy\" decoding=\"async\"" if lazy else " fetchpriority=\"high\""}>'
 
-NAV = [("/", "Главная"), ("/o-kompanii/", "О компании"), ("/napravleniya/", "Направления"), ("/portfolio/", "Портфолио"), ("/kontakty/", "Контакты")]
+NAV = [("/", "Главная"), ("/tury/", "Туры"), ("/o-kompanii/", "О компании"), ("/napravleniya/", "Направления"), ("/portfolio/", "Портфолио"), ("/kontakty/", "Контакты")]
 
 def header(cur):
     items = ""
     for href, name in NAV:
         a = ' aria-current="page"' if cur == href else ""
-        if href == "/napravleniya/":
+        if href == "/tury/":
+            sub = "".join(f'<a href="/tury/#{g}">{ic("globe" if g == "abroad" else "star" if g == "kids" else "pin")}<span>{n}</span></a>' for g, n, _ in TOUR_GROUPS)
+            items += f'<li class="has-dd"><a href="{href}"{a}>{name}</a><button class="dd-t" type="button" aria-label="Открыть список туров" aria-expanded="false">{ic("chev")}</button><div class="dd">{sub}</div></li>'
+        elif href == "/napravleniya/":
             sub = "".join(f'<a href="/napravleniya/{d["slug"]}/">{ic(d["icon"])}<span>{d["name"]}</span></a>' for d in DIRS)
             items += f'<li class="has-dd"><a href="{href}"{a}>{name}</a><button class="dd-t" type="button" aria-label="Открыть список направлений" aria-expanded="false">{ic("chev")}</button><div class="dd">{sub}</div></li>'
         else:
@@ -87,8 +93,9 @@ def footer():
     ct += f'<li><a href="mailto:{EMAIL}">{ic("mail")}{EMAIL}</a></li><li>{ic("pin")}{ADDRESS}</li><li>{ic("clock")}{HOURS}</li>'
     y = datetime.date.today().year
     return f'''<footer class="ftr"><div class="wrap">
-<div class="ftr-g"><div class="ftr-a">{logo(True)}<p>Многопрофильная компания: цифровые технологии, защита цифровой инфраструктуры, аналитика, коммуникации и организация мероприятий.</p><a class="btn btn-g btn-s" href="/kontakty/#form">Обсудить проект</a></div>
+<div class="ftr-g"><div class="ftr-a">{logo(True)}<p>Многопрофильная компания: туры и путешествия, организация мероприятий, цифровые технологии, аналитика и коммуникации.</p><a class="btn btn-g btn-s" href="/kontakty/#form">Обсудить проект</a></div>
 <div class="f-col"><h4>Разделы {ic("chev")}</h4><ul>{pages}</ul></div>
+<div class="f-col"><h4>Туры {ic("chev")}</h4><ul>{"".join(f'<li><a href="/tury/{t["slug"]}/">{t["short"]}</a></li>' for t in TOURS if t["grp"] in ("kz", "abroad"))}<li><a href="/tury/">Все туры</a></li></ul></div>
 <div class="f-col f-wide"><h4>Направления {ic("chev")}</h4><ul>{dirs}</ul></div>
 <div class="f-col f-ct"><h4>Контакты {ic("chev")}</h4><ul>{ct}</ul></div></div>
 <div class="ftr-b"><span>© {y} {BRAND}</span><a href="/politika-konfidencialnosti/">Политика конфиденциальности</a><a href="{DEV_URL}" target="_blank" rel="noopener">Разработка сайта — {DEV_NAME}</a></div>
@@ -117,7 +124,7 @@ ORG = {"@context": "https://schema.org", "@type": "Organization", "@id": SITE + 
        "logo": SITE + "/icon-512.png", "email": EMAIL, "description": INTRO[0],
        "address": {"@type": "PostalAddress", "addressLocality": "Алматы", "addressCountry": "KZ"},
        "areaServed": {"@type": "Country", "name": "Казахстан"},
-       "knowsAbout": [d["name"] for d in DIRS],
+       "knowsAbout": ["Туры и путешествия"] + [d["name"] for d in DIRS],
        "contactPoint": [{"@type": "ContactPoint", "contactType": "customer service", "email": EMAIL, "availableLanguage": ["ru"], **({"telephone": PHONE} if PHONE else {})}]}
 if PHONE: ORG["telephone"] = PHONE
 
@@ -128,12 +135,15 @@ def page(url, title, desc, body, cur="", ld=None, og=None):
     if url == "/":
         lds.append({"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": SITE + "/", "inLanguage": "ru"})
     ld_html = "".join(f'<script type="application/ld+json">{json.dumps(x, ensure_ascii=False)}</script>' for x in lds)
-    ga = f'''<script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());gtag("config","{GA_ID}");</script>''' if GA_ID else ""
+    tag_id = GA_ID or GADS_ID
+    cfgs = "".join(f'gtag("config","{x}");' for x in (GA_ID, GADS_ID) if x)
+    ga = f'''<script async src="https://www.googletagmanager.com/gtag/js?id={tag_id}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());{cfgs}</script>''' if tag_id else ""
     gsc = f'<meta name="google-site-verification" content="{GSC_META}">' if GSC_META else ""
-    cfg = json.dumps({"email": EMAIL, "phone": PHONE, "wa": WHATSAPP, "hours": HOURS, "addr": ADDRESS, "dirs": [[d["slug"], d["name"], d["short"]] for d in DIRS]}, ensure_ascii=False)
+    cfg = json.dumps({"ads": [GADS_ID, GADS_LEAD_LABEL, GADS_CONTACT_LABEL], "email": EMAIL, "phone": PHONE, "wa": WHATSAPP, "hours": HOURS, "addr": ADDRESS, "dirs": [[d["slug"], d["name"], d["short"]] for d in DIRS]}, ensure_ascii=False)
     return f'''<!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+{ga}
 <title>{E(title)}</title><meta name="description" content="{E(desc)}">
 <link rel="canonical" href="{full}"><meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="theme-color" content="#0b1b33">{gsc}
@@ -145,7 +155,7 @@ def page(url, title, desc, body, cur="", ld=None, og=None):
 <link rel="preload" href="/assets/fonts/manrope-cyrillic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/onest-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/styles.css?v={VER}">
-{ld_html}{ga}
+{ld_html}
 </head><body>
 {header(cur)}
 <main id="main">
@@ -213,6 +223,39 @@ def cta_sec():
 <div class="cta-t"><span class="eyebrow">Сотрудничество</span><h2>Открыты к деловому сотрудничеству</h2><p>Если вы заинтересованы в сотрудничестве с Event Network, свяжитесь с нами для обсуждения задач, формата взаимодействия и возможных направлений совместной работы.</p>{contact_list()}</div>
 {form_html("form", "Обсудим ваш проект")}</div></section>'''
 
+def tour_card(t):
+    ph = ROOT / "assets" / "img" / "tury" / f'{t["slug"]}.webp'
+    im = f'<img src="/assets/img/tury/{t["slug"]}.webp?v={VER}" alt="{E(t["h1"])}" width="800" height="600" loading="lazy" decoding="async">' if ph.exists() else ""
+    grp = next(n for g, n, _ in TOUR_GROUPS if g == t["grp"])
+    return f'''<a class="tc" href="/tury/{t["slug"]}/"><span class="tc-im tc-{t["tone"]}">{im}<span class="tc-n">{t["short"]}</span></span><span class="tc-b"><span class="more">Подобрать тур {ic("arrow")}</span></span></a>'''
+
+def tour_groups_html(only=None, exclude=None):
+    out = ""
+    for g, n, sub in TOUR_GROUPS:
+        if only and g not in only: continue
+        cards = "".join(tour_card(t) for t in TOURS if t["grp"] == g and t["slug"] != exclude)
+        if cards: out += f'<div class="tg" id="{g}"><div class="tg-h"><h3>{n}</h3><p>{sub}</p></div><div class="tc-g">{cards}</div></div>'
+    return out
+
+def tour_steps():
+    return '<ol class="st">' + "".join(f'<li><span class="st-n">{i+1:02d}</span><b>{t}</b><p>{d}</p></li>' for i, (t, d) in enumerate(TOUR_STEPS)) + "</ol>"
+
+def tour_form(fid="tform", preset=None, title="Подобрать тур"):
+    opts = "".join(f'<option{" selected" if preset == t["short"] else ""}>{t["short"]}</option>' for t in TOURS)
+    return f'''<form class="frm" id="{fid}" novalidate>
+<h3>{title}</h3><p class="frm-s">Укажите направление, даты и количество человек — подберём варианты и свяжемся с вами.</p>
+<div class="fld"><label for="{fid}-n">Ваше имя</label><input id="{fid}-n" name="name" type="text" autocomplete="name" required maxlength="80"></div>
+<div class="fld"><label for="{fid}-c">Телефон или WhatsApp</label><input id="{fid}-c" name="contact" type="tel" inputmode="tel" autocomplete="tel" required maxlength="120" placeholder="+7"></div>
+<div class="fld"><label for="{fid}-d">Направление</label><select id="{fid}-d" name="dir"><option value="Тур">Не выбрано</option>{opts}</select></div>
+<div class="fld"><label for="{fid}-m">Даты, город выезда, сколько человек</label><textarea id="{fid}-m" name="message" rows="3" maxlength="2000" placeholder="Например: июль, из Алматы, 2 взрослых и ребёнок"></textarea></div>
+<label class="chk"><input type="checkbox" name="agree" required checked><span>Согласен с <a href="/politika-konfidencialnosti/">политикой конфиденциальности</a></span></label>
+<button class="btn btn-g btn-w" type="submit">Подобрать тур {ic("send")}</button>
+<p class="frm-st" role="status" aria-live="polite"></p>
+</form>'''
+
+def tour_hero(title, sub, tone, items, preset=None):
+    return f'''<section class="th th-{tone}"><div class="wrap th-in"><div class="th-t">{crumbs(items)}<h1>{title}</h1><p>{sub}</p><div class="btns"><a class="btn btn-g" href="#tform">Подобрать тур {ic("arrow")}</a><button class="btn btn-ol" type="button" data-chat="{E(preset or "туры")}">Спросить ассистента</button></div></div></div></section>'''
+
 def banner(title, sub, image, items):
     return f'''<section class="pb"><div class="pb-bg">{img(image, "", w=1800, h=600, lazy=False)}</div><div class="wrap pb-in">{crumbs(items)}<h1>{title}</h1><p>{sub}</p></div></section>'''
 
@@ -223,6 +266,7 @@ def build_home():
 <div class="wrap hero-in"><span class="eyebrow eyebrow-l">Многопрофильная компания · Казахстан</span><h1>{HERO_H1}</h1><p class="hero-s">{HERO_SUB}</p>
 <div class="btns"><a class="btn btn-g" href="/napravleniya/">Наши направления {ic("arrow")}</a><a class="btn btn-ol" href="/kontakty/#form">Связаться с нами</a></div></div></section>
 <section class="hstrip" aria-label="Основные направления"><div class="wrap"><div class="hs-g">{strip}</div></div></section>
+<section class="sec sec-tours"><div class="wrap">{sec_h("Туры и путешествия", "Казахстан, Иссык-Куль, зарубежье и детский отдых. Подберём тур под ваши даты, состав группы и бюджет.", ("Все туры", "/tury/"))}{tour_groups_html(only=("kz", "abroad"))}</div></section>
 <section class="sec"><div class="wrap split">
 <div class="split-im">{img("events", "Деловое мероприятие: сцена и участники")}</div>
 <div><span class="eyebrow">О компании</span><h2>Event Network — ваш партнёр в реализации идей и проектов</h2>{"".join(f"<p>{t}</p>" for t in INTRO)}
@@ -270,6 +314,28 @@ def build_dirs():
         svc = {"@context": "https://schema.org", "@type": "Service", "name": d["name"], "description": d["text"], "serviceType": d["name"], "provider": {"@id": SITE + "/#org"}, "areaServed": {"@type": "Country", "name": "Казахстан"}, "url": SITE + url}
         write(url, page(url, f'{d["name"]} — {BRAND}', f'{d["text"]} Event Network, Казахстан.'[:300], body, "/napravleniya/", [svc, ld_crumbs(it2, url), ld_faq(d["faq"])]))
 
+def build_tours():
+    it = [("/", "Главная"), (None, "Туры")]
+    body = f'''{tour_hero("Туры и путешествия из Алматы и Астаны", "Отдых в Казахстане и на Иссык-Куле, однодневные поездки, зарубежные туры и детские лагеря. Подберём тур под ваши даты и бюджет.", "lake", it)}
+<section class="sec"><div class="wrap">{tour_groups_html()}</div></section>
+<section class="sec sec-alt"><div class="wrap">{sec_h("Как мы подбираем тур")}{tour_steps()}</div></section>
+<section class="sec"><div class="wrap faq-w">{sec_h("Частые вопросы")}{faq_html(TOUR_FAQ)}</div></section>
+<section class="sec sec-alt"><div class="wrap cta"><div class="cta-t"><h2>Подберём тур под ваш запрос</h2><p>Напишите направление, даты и количество человек — предложим варианты.</p>{contact_list()}</div>{tour_form()}</div></section>'''
+    ld = [ld_crumbs(it, "/tury/"), ld_faq(TOUR_FAQ), {"@context": "https://schema.org", "@type": "ItemList", "itemListElement": [{"@type": "ListItem", "position": i + 1, "url": f'{SITE}/tury/{t["slug"]}/', "name": t["h1"]} for i, t in enumerate(TOURS)]}]
+    write("/tury/", page("/tury/", f"Туры из Алматы и Астаны: Казахстан, Иссык-Куль, зарубежье — {BRAND}", "Туры на Алаколь, Иссык-Куль, Боровое, Балхаш, Чарынский каньон, в Таиланд, Вьетнам, Европу и детские лагеря. Подбор тура под ваши даты и бюджет.", body, "/tury/", ld))
+    for t in TOURS:
+        url = f'/tury/{t["slug"]}/'
+        it2 = [("/", "Главная"), ("/tury/", "Туры"), (None, t["short"])]
+        faq = [(f'Как заказать тур — {t["short"]}?', "Оставьте заявку на этой странице: даты, город выезда и количество человек. Подберём варианты и свяжемся с вами.")] + TOUR_FAQ
+        opts = "".join(f'<li>{ic("check")}<span>{x}</span></li>' for x in t["opts"])
+        body = f'''{tour_hero(t["h1"], t["lead"], t["tone"], it2, t["short"])}
+<section class="sec"><div class="wrap cta"><div class="cta-t"><h2>Что можно выбрать</h2><ul class="ck">{opts}</ul><p class="tr-note">Стоимость зависит от дат, проживания и количества человек — подберём варианты под ваш бюджет.</p></div>{tour_form(preset=t["short"], title="Подобрать тур — " + t["short"])}</div></section>
+<section class="sec sec-alt"><div class="wrap">{sec_h("Как мы подбираем тур")}{tour_steps()}</div></section>
+<section class="sec"><div class="wrap faq-w">{sec_h("Частые вопросы")}{faq_html(faq)}</div></section>
+<section class="sec sec-alt"><div class="wrap">{sec_h("Другие направления", "", ("Все туры", "/tury/"))}{tour_groups_html(exclude=t["slug"], only=(t["grp"],))}</div></section>'''
+        svc = {"@context": "https://schema.org", "@type": "TouristTrip", "name": t["h1"], "description": t["lead"], "provider": {"@id": SITE + "/#org"}, "url": SITE + url}
+        write(url, page(url, f'{t["h1"]} — подбор тура | {BRAND}', f'{t["lead"]}'[:300], body, "/tury/", [svc, ld_crumbs(it2, url), ld_faq(faq)]))
+
 def build_portfolio():
     it = [("/", "Главная"), (None, "Портфолио")]
     chips = "".join(f'<button type="button" class="chip{" on" if k == "all" else ""}" data-f="{k}" aria-pressed="{"true" if k == "all" else "false"}">{n}</button>' for k, n in WORK_FILTERS)
@@ -311,15 +377,17 @@ def build_404():
     h = page("/404/", f"Страница не найдена — {BRAND}", "Страница не найдена.", body).replace('content="index,follow,max-image-preview:large"', 'content="noindex"')
     write("/404/", h)
 
-URLS = ["/", "/o-kompanii/", "/napravleniya/"] + [f'/napravleniya/{d["slug"]}/' for d in DIRS] + ["/portfolio/", "/kontakty/", "/politika-konfidencialnosti/"]
+URLS = ["/", "/tury/"] + [f'/tury/{t["slug"]}/' for t in TOURS] + ["/o-kompanii/", "/napravleniya/"] + [f'/napravleniya/{d["slug"]}/' for d in DIRS] + ["/portfolio/", "/kontakty/", "/politika-konfidencialnosti/"]
 
 def build_meta():
-    sm = "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{TODAY}</lastmod><priority>{'1.0' if u == '/' else '0.8' if 'napravleniya' in u else '0.6'}</priority></url>\n" for u in URLS)
+    sm = "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{TODAY}</lastmod><priority>{'1.0' if u == '/' else '0.9' if u.startswith('/tury/') else '0.8' if 'napravleniya' in u else '0.6'}</priority></url>\n" for u in URLS)
     (DIST / "sitemap.xml").write_text(f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{sm}</urlset>\n', encoding="utf-8")
     bots = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "PerplexityBot", "Google-Extended", "Bingbot", "YandexBot"]
     (DIST / "robots.txt").write_text("User-agent: *\nAllow: /\nDisallow: /api/\n\n" + "".join(f"User-agent: {b}\nAllow: /\n\n" for b in bots) + f"Sitemap: {SITE}/sitemap.xml\n", encoding="utf-8")
     ll = [f"# {BRAND}", "", f"> {INTRO[0]}", "", "## О компании"] + [f"- {t}" for t in ABOUT] + ["", "## Направления деятельности"]
     ll += [f"- [{d['name']}]({SITE}/napravleniya/{d['slug']}/): {d['text']}" for d in DIRS]
+    ll += ["", "## Туры и путешествия", f"- [Все туры]({SITE}/tury/): подбор тура под даты, состав группы и бюджет; выезд из Алматы и Астаны"]
+    ll += [f"- [{t['h1']}]({SITE}/tury/{t['slug']}/): {t['lead']}" for t in TOURS]
     ll += ["", "## Подход"] + [f"- {t}: {d}" for _, t, d in PRINCIPLES] + ["", "## Частые вопросы"] + [f"- {q} {a}" for q, a in FAQ_HOME]
     ll += ["", "## Контакты", f"- Электронная почта: {EMAIL}"] + ([f"- Телефон: {PHONE}"] if PHONE else []) + [f"- Адрес: {ADDRESS}", f"- Время работы: {HOURS}", f"- Сайт: {SITE}/"]
     (DIST / "llms.txt").write_text("\n".join(ll) + "\n", encoding="utf-8")
@@ -335,5 +403,5 @@ def build_assets():
 if __name__ == "__main__":
     if DIST.exists(): shutil.rmtree(DIST)
     DIST.mkdir()
-    build_assets(); build_home(); build_about(); build_dirs(); build_portfolio(); build_contacts(); build_privacy(); build_404(); build_meta()
+    build_assets(); build_home(); build_tours(); build_about(); build_dirs(); build_portfolio(); build_contacts(); build_privacy(); build_404(); build_meta()
     print("pages:", len(URLS) + 1)
