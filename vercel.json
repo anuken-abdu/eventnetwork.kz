@@ -1,4 +1,6 @@
 {
+  "buildCommand": "python3 src/build.py",
+  "installCommand": "",
   "framework": null,
   "outputDirectory": "dist",
   "cleanUrls": false,
@@ -49,6 +51,16 @@
     {
       "source": "/about",
       "destination": "/o-kompanii/",
+      "permanent": true
+    },
+    {
+      "source": "/tury",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/tury/:path*",
+      "destination": "/",
       "permanent": true
     }
   ]
