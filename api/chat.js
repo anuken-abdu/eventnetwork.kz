@@ -4,7 +4,7 @@
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
 const EMAIL = process.env.CONTACT_EMAIL || "info@eventnetwork.kz";
-const PHONE = process.env.CONTACT_PHONE || "";
+const PHONE = process.env.CONTACT_PHONE || "+7 778 808 99 79";
 
 const SYSTEM = `Ты — онлайн-ассистент на сайте компании Event Network (eventnetwork.kz). Отвечаешь посетителям вежливо, по делу и по-человечески.
 
